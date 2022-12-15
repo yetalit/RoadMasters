@@ -27,6 +27,7 @@ public class SqlScript : MonoBehaviour
         catch (System.Exception e) { Debug.LogError(e); conn = null; }
         return result;
     }
+
     public static short SignUser(string username, string pass)
     {
         short result = 0;
@@ -46,6 +47,7 @@ public class SqlScript : MonoBehaviour
         catch (System.Exception e) { Debug.LogError(e); conn = null; }
         return result;
     }
+
     public static short LogUser(string username, string pass)
     {
         short result = 0;
@@ -65,6 +67,7 @@ public class SqlScript : MonoBehaviour
         catch (System.Exception e) { Debug.LogError(e); conn = null; }
         return result;
     }
+
     public static string MD5Hash(string input)
     {
         StringBuilder hash = new StringBuilder();
@@ -77,7 +80,8 @@ public class SqlScript : MonoBehaviour
         }
         return hash.ToString();
     }
-    public static string[] getMyMaps ()
+
+    public static string[] getMyMaps (string user)
     {
         List<string> names = new List<string>();
         conn = new NpgsqlConnection(server_db);
@@ -86,7 +90,7 @@ public class SqlScript : MonoBehaviour
             conn.Open();
             NpgsqlCommand command = conn.CreateCommand();
             string query = "SELECT \"Map\".\"Index\", \"Map\".\"Name\"" +
-                           "FROM \"Map\" WHERE \"Creator\" = \'" + MenuManager.UserName + "\' ORDER BY \"Map\".\"Index\" DESC";
+                           "FROM \"Map\" WHERE \"Creator\" = \'" + user + "\' ORDER BY \"Map\".\"Index\" DESC";
             command.CommandText = query;
             NpgsqlDataReader reader = command.ExecuteReader();
             while (reader.Read())
@@ -96,6 +100,7 @@ public class SqlScript : MonoBehaviour
         catch (System.Exception e) { Debug.LogError(e); names.Add("0"); conn = null; }
         return names.ToArray();
     }
+
     public static string[] getMaps()
     {
         List<string> names = new List<string>();
@@ -115,6 +120,7 @@ public class SqlScript : MonoBehaviour
         catch (System.Exception e) { Debug.LogError(e); names.Add("0"); conn = null; }
         return names.ToArray();
     }
+
     public static string[] getTimes()
     {
         List<string> times = new List<string>();
@@ -138,6 +144,7 @@ public class SqlScript : MonoBehaviour
         catch (System.Exception e) { Debug.LogError(e); times.Add("0"); conn = null; }
         return times.ToArray();
     }
+
     public static short publishMap(string name, Vector3[] points, float[] settingVals, int[] SelectState, float[] speedState, Vector3[] obsPos)
     {
         short result = 0;
@@ -209,6 +216,7 @@ public class SqlScript : MonoBehaviour
         catch (System.Exception e) { Debug.LogError(e); conn = null; }
         return result;
     }
+
     public static short getMapData()
     {
         short result = 0;
@@ -315,6 +323,7 @@ public class SqlScript : MonoBehaviour
         catch (System.Exception e) { Debug.LogError(e); conn = null; }
         return result;
     }
+
     public static double getBestTime(double time)
     {
         double result = 0.0;
@@ -333,6 +342,7 @@ public class SqlScript : MonoBehaviour
         catch (System.Exception e) { Debug.LogError(e); conn = null; }
         return result;
     }
+
     public static short delMap()
     {
         short result = 0;
@@ -342,6 +352,49 @@ public class SqlScript : MonoBehaviour
             conn.Open();
             NpgsqlCommand command = conn.CreateCommand();
             string query = "SELECT \"deleteMap\" (" + MenuManager.MapIndex + ")";
+            command.CommandText = query;
+            NpgsqlDataReader reader = command.ExecuteReader();
+            while (reader.Read())
+                result = reader.GetInt16(0);
+            conn.Close();
+        }
+        catch (System.Exception e) { Debug.LogError(e); conn = null; }
+        return result;
+    }
+
+    public static string[] getCreators()
+    {
+        List<string> creators = new List<string>();
+        int i = MenuManager.MapIndex;
+        conn = new NpgsqlConnection(server_db);
+        try
+        {
+            conn.Open();
+            NpgsqlCommand command = conn.CreateCommand();
+            string query = "SELECT * FROM \"BestCreators\" ORDER BY \"MapCount\" DESC LIMIT 100";
+            command.CommandText = query;
+            NpgsqlDataReader reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                creators.Add(reader.GetString(0));
+                creators.Add(reader.GetDouble(1).ToString());
+            }
+            conn.Close();
+        }
+        catch (System.Exception e) { Debug.LogError(e); creators.Add("0"); conn = null; }
+        return creators.ToArray();
+    }
+
+    public static short ChangeUser(string username, string pass)
+    {
+        short result = 0;
+        pass = MD5Hash(pass);
+        conn = new NpgsqlConnection(server_db);
+        try
+        {
+            conn.Open();
+            NpgsqlCommand command = conn.CreateCommand();
+            string query = "SELECT \"changeUserName\" (\'" + username + "\', \'" + pass + "\', \'" + MenuManager.UserName + "\')";
             command.CommandText = query;
             NpgsqlDataReader reader = command.ExecuteReader();
             while (reader.Read())

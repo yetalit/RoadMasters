@@ -15,6 +15,8 @@ public class MenuManager : MonoBehaviour
     public InputField log_pass;
     public InputField sig_user;
     public InputField sig_pass;
+    public InputField ch_user;
+    public InputField ch_pass;
 
     public Text NameText;
 
@@ -25,10 +27,14 @@ public class MenuManager : MonoBehaviour
 
     string[] mapNames;
     string[] timeNames;
+    string[] creators;
     string[] MymapNames;
+    string[] UsermapNames;
     bool showmaps = false;
     bool showtimes = false;
     bool showMymaps = false;
+    bool showcreators = false;
+    bool showusermaps = false;
 
     public static List<Vector3> points = new List<Vector3>();
     public static List<Vector3> obsPos = new List<Vector3>();
@@ -90,7 +96,8 @@ public class MenuManager : MonoBehaviour
         ConsText.text = "Please Wait...";
         Cons.SetActive(true);
         mapNames = SqlScript.getMaps();
-        if (mapNames.Length > 0 && mapNames[0] == "0")
+        creators = SqlScript.getCreators();
+        if ((mapNames.Length > 0 && mapNames[0] == "0") || (creators.Length > 0 && creators[0] == "0"))
         {
             ShowError("Couldn't connect to the database, Please Try again...", 0);
         }
@@ -106,7 +113,7 @@ public class MenuManager : MonoBehaviour
     {
         ConsText.text = "Please Wait...";
         Cons.SetActive(true);
-        MymapNames = SqlScript.getMyMaps();
+        MymapNames = SqlScript.getMyMaps(UserName);
         if (MymapNames.Length > 0 && MymapNames[0] == "0")
         {
             ShowError("Couldn't connect to the database, Please Try again...", 0);
@@ -118,6 +125,23 @@ public class MenuManager : MonoBehaviour
             showMymaps = true;
         }
     }
+    public void UserMaps(string user)
+    {
+        ConsText.text = "Please Wait...";
+        showcreators = false;
+        Cons.SetActive(true);
+        UsermapNames = SqlScript.getMyMaps(user);
+        if (UsermapNames.Length > 0 && UsermapNames[0] == "0")
+        {
+            ShowError("Couldn't connect to the database, Please Try again...", 3);
+        }
+        else
+        {
+            Cons.SetActive(false);
+            showusermaps = true;
+        }
+    }
+
     public void BackMap ()
     {
         showMymaps = false;
@@ -137,9 +161,9 @@ public class MenuManager : MonoBehaviour
         {
             Cons.SetActive(false);
             showtimes = true;
-            showmaps = false;
         }
     }
+
     public void Login()
     {
         if (log_user.text != "" && log_pass.text != "")
@@ -152,7 +176,6 @@ public class MenuManager : MonoBehaviour
                 if (log == 1)
                 {
                     UserName = log_user.text;
-                    log_user.text = log_pass.text = "";
                     Cons.SetActive(false);
                     WinCloser(1);
                     NameText.text = UserName;
@@ -179,7 +202,6 @@ public class MenuManager : MonoBehaviour
                 if (sign == 1)
                 {
                     UserName = sig_user.text;
-                    sig_user.text = sig_pass.text = "";
                     Cons.SetActive(false);
                     WinCloser(2);
                     NameText.text = UserName;
@@ -195,9 +217,43 @@ public class MenuManager : MonoBehaviour
         }
     }
 
+    public void ChangeName()
+    {
+        if (ch_user.text != "" && ch_pass.text != "")
+        {
+            ConsText.text = "Please Wait...";
+            Cons.SetActive(true);
+            short change = SqlScript.ChangeUser(ch_user.text, ch_pass.text);
+            if (change != 0)
+            {
+                if (change == 1)
+                {
+                    Cons.SetActive(false);
+                    WinCloser(6);
+                    NameText.text = UserName;
+                    WinOpener(3);
+                    LogOut();
+                }
+                else if (change == 2)
+                {
+                    ShowError("User Name is already taken!", 0);
+                }
+                else
+                {
+                    ShowError("Password is wrong!", 0);
+                }
+            }
+            else
+                ShowError("Couldn't connect to the database, Please Try again...", 0);
+        }
+    }
+
     public void LogOut ()
     {
         UserName = "";
+        log_user.text = log_pass.text = "";
+        sig_user.text = sig_pass.text = "";
+        ch_user.text = ch_pass.text = "";
         WinCloser(3);
         WinOpener(0);
     }
@@ -217,6 +273,10 @@ public class MenuManager : MonoBehaviour
         {
             showMymaps = true;
         }
+        else if (state == 3)
+        {
+            showcreators = true;
+        }
         Cons.SetActive(false);
     }
     public void PlaySound(AudioClip audio)
@@ -230,7 +290,10 @@ public class MenuManager : MonoBehaviour
     }
     public void WinOpener(int index)
     {
-        Windows[0].SetActive(false);
+        int mainMenu = 0;
+        if (index == 6)
+            mainMenu = 3;
+        Windows[mainMenu].SetActive(false);
         Windows[index].SetActive(true);
     }
     public void WinCloser (int index)
@@ -242,11 +305,21 @@ public class MenuManager : MonoBehaviour
                 showmaps = false;
             else
             {
-                BackTimes();
+                showmaps = true;
+                showtimes = false;
+                showcreators = false;
+                if (showusermaps)
+                {
+                    showmaps = false;
+                    showusermaps = false;
+                    showcreators = true;
+                }
                 return;
             }
             mainMenu = 3;
         }
+        if (index == 6)
+            mainMenu = 3;
         Windows[index].SetActive(false);
         Windows[mainMenu].SetActive(true);
     }
@@ -267,6 +340,11 @@ public class MenuManager : MonoBehaviour
         scrollPosition, GUILayout.Width(Screen.width / 1.32f), GUILayout.Height(Screen.height / 1.35f));
         if (showmaps)
         {
+            if (GUILayout.Button("Best Creators"))
+            {
+                showmaps = false;
+                showcreators = true;
+            }
             for (int i = 0; i < mapNames.Length; i++)
             {
                 GUILayout.Box(mapNames[i]);
@@ -289,6 +367,18 @@ public class MenuManager : MonoBehaviour
             {
                 GUILayout.Box('[' + (i + 1).ToString() + "]  " + timeNames[i * 2]);
                 GUILayout.Box(timeNames[i * 2 + 1] + " s");
+            }
+        }
+        if (showcreators)
+        {
+            for (int i = 0; i < creators.Length / 2; i++)
+            {
+                GUILayout.Box('[' + (i + 1).ToString() + "]  " + creators[i * 2]);
+                GUILayout.Box(creators[i * 2 + 1]);
+                if (GUILayout.Button("Created Maps"))
+                {
+                    UserMaps(creators[i * 2]);
+                }
             }
         }
         if (showMymaps)
@@ -327,14 +417,15 @@ public class MenuManager : MonoBehaviour
                 }
             }
         }
+        if (showusermaps)
+        {
+            for (int i = 0; i < UsermapNames.Length; i++)
+            {
+                GUILayout.Box(UsermapNames[i]);
+            }
+        }
         GUILayout.EndScrollView();
         GUILayout.EndArea();
-    }
-
-    void BackTimes ()
-    {
-        showtimes = false;
-        showmaps = true;
     }
 
     IEnumerator FadeImage(Image img, bool fadeAway, int scene)
